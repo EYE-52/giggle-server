@@ -107,6 +107,7 @@ const createSquadHandler = async (req, res) => {
         squadId: newSquad.squadId,
         squadCode: newSquad.squadCode,
         member: newMember,
+        members: [newMember],
         status: newSquad.status,
       },
     });

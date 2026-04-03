@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const swaggerUi = require('swagger-ui-express');
@@ -11,6 +12,15 @@ const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI;
 
 // Middleware
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+  ],
+  credentials: true,
+}));
 app.use(express.json());
 app.use(cookieParser());
 if (ENABLE_REQUEST_LOGS) {
@@ -59,8 +69,10 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Routes
 const squadRoutes = require("./routes/squadRoutes");
 const authRoutes = require("./routes/authRoutes");
+const agoraRoutes = require("./routes/agoraRoutes");
 app.use("/api", squadRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api", agoraRoutes);
 
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && "body" in err) {

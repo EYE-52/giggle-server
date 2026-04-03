@@ -21,6 +21,11 @@ JWT_SECRET=replace-me
 MAX_SQUAD_MEMBERS=4
 MIN_MEMBERS_TO_SEARCH=2
 
+# Agora (required for lobby video)
+AGORA_APP_ID=replace-me
+AGORA_APP_CERTIFICATE=replace-me
+AGORA_TOKEN_EXPIRY_SECONDS=3600
+
 # Logging
 ENABLE_REQUEST_LOGS=true
 LOG_REQUEST_BODY=false
@@ -46,6 +51,19 @@ Swagger docs are served at `/api-docs`.
 - `POST /api/squads/:squadId/members/:memberId/kick` (leader only)
 - `POST /api/squads/:squadId/members/:memberId/promote` (leader only)
 - `POST /api/squads/:squadId/leave`
+
+## Agora APIs (Phase 1)
+
+- `POST /api/agora/lobby-token/:squadId`
+
+This endpoint is authenticated and squad-member protected. It returns:
+
+- `appId`
+- `channelName` (format: `lobby_<squadId>`)
+- `rtcToken`
+- `uid`
+- `expiresIn`
+- `expiresAt`
 
 ## Access Control Rules
 
