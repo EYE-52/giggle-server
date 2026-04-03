@@ -2,11 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
-
-
 const swaggerUi = require('swagger-ui-express');
 const swaggerJSDoc = require('swagger-jsdoc');
-
+const { requestLogger } = require('./middlewares/requestLogger');
+const { ENABLE_REQUEST_LOGS, LOG_REQUEST_BODY } = require('./config/appConfig');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -14,6 +13,9 @@ const MONGODB_URI = process.env.MONGODB_URI;
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
+if (ENABLE_REQUEST_LOGS) {
+  app.use(requestLogger({ logRequestBody: LOG_REQUEST_BODY }));
+}
 
 // Database connection
 mongoose.connect(MONGODB_URI)
@@ -56,12 +58,27 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
 const squadRoutes = require("./routes/squadRoutes");
+const authRoutes = require("./routes/authRoutes");
 app.use("/api", squadRoutes);
+app.use("/api/auth", authRoutes);
 
-// Basic error handling middleware
 app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
+    return res.status(400).json({
+      ok: false,
+      error: {
+        code: "INVALID_JSON",
+        message: "Malformed JSON body",
+        hint: 'Use valid JSON like {"squadCode":"GIG-882","displayName":"Himanshu"}',
+      },
+    });
+  }
+
   console.error(err.stack);
-  res.status(500).send('Something broke!');
+  res.status(500).json({
+    ok: false,
+    error: { code: "INTERNAL_ERROR", message: "Something broke" },
+  });
 });
 
 app.listen(PORT, () => {
