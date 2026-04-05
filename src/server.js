@@ -70,9 +70,13 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 const squadRoutes = require("./routes/squadRoutes");
 const authRoutes = require("./routes/authRoutes");
 const agoraRoutes = require("./routes/agoraRoutes");
+const matchmakingRoutes = require("./routes/matchmakingRoutes");
+const encounterRoutes = require("./routes/encounterRoutes");
 app.use("/api", squadRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api", agoraRoutes);
+app.use("/api", matchmakingRoutes);
+app.use("/api", encounterRoutes);
 
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && "body" in err) {

@@ -5,6 +5,7 @@ const {
 	getMySquadHandler,
 	getSquadHandler,
 	updateReadyStateHandler,
+	updateSquadNameHandler,
 	startSearchHandler,
 	cancelSearchHandler,
 	kickMemberHandler,
@@ -173,6 +174,7 @@ router.get("/squads/:squadId", requireApiAuth, requireSquadMemberAccess, getSqua
  *         description: Invalid squad state
  */
 router.post("/squads/:squadId/ready", requireApiAuth, requireSquadMemberAccess, updateReadyStateHandler);
+router.post("/squads/:squadId/name", requireApiAuth, requireSquadLeaderAccess, updateSquadNameHandler);
 
 /**
  * @swagger

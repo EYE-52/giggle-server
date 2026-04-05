@@ -13,12 +13,18 @@ const squadMemberSchema = new mongoose.Schema({
 const squadSchema = new mongoose.Schema({
   squadId: { type: String, required: true, unique: true },
   squadCode: { type: String, required: true, unique: true },
+  squadName: { type: String, trim: true, maxlength: 32, default: "Unnamed squad" },
   status: {
     type: String,
     enum: ["idle", "searching", "matched", "in_encounter"],
     default: "idle",
   },
   members: [squadMemberSchema],
+  searchRegion: { type: String, default: "global" },
+  searchQueuedAt: { type: Date, default: null },
+  currentEncounterId: { type: String, default: null },
+  opponentSquadId: { type: String, default: null },
+  matchedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
 });
 

@@ -8,6 +8,12 @@ const {
   persistSquadAfterMemberRemoval,
 } = require("../app/squadAccess");
 const { generateId, generateSquadCode } = require("../utils/idGenerator");
+const { tryMatchmakeForSquad } = require("../services/matchmakingService");
+
+const normalizeSquadName = (value) => {
+  if (typeof value !== "string") return "";
+  return value.replace(/\s+/g, " ").trim();
+};
 
 const getMySquadHandler = async (req, res) => {
   const identity = getRequesterIdentity(req);
@@ -34,6 +40,7 @@ const getMySquadHandler = async (req, res) => {
         inSquad: true,
         squadId: squad.squadId,
         squadCode: squad.squadCode,
+        squadName: squad.squadName,
         status: squad.status,
         member,
         leaderMemberId: leader ? leader.memberId : null,
@@ -50,7 +57,7 @@ const getMySquadHandler = async (req, res) => {
 };
 
 const createSquadHandler = async (req, res) => {
-  const { displayName } = req.body;
+  const { displayName, squadName } = req.body;
   const { userId, providerAccountId, name, email } = getRequesterIdentity(req);
 
   if (!userId) {
@@ -80,6 +87,14 @@ const createSquadHandler = async (req, res) => {
     const squadId = generateId("sq");
     const squadCode = generateSquadCode();
     const memberId = generateId("mem");
+    const normalizedSquadName = normalizeSquadName(squadName) || `Squad ${squadCode}`;
+
+    if (normalizedSquadName.length < 2 || normalizedSquadName.length > 32) {
+      return res.status(400).json({
+        ok: false,
+        error: { code: "INVALID_SQUAD_NAME", message: "Squad name must be 2-32 characters" },
+      });
+    }
 
     const newMember = {
       memberId,
@@ -94,6 +109,7 @@ const createSquadHandler = async (req, res) => {
     const newSquad = new Squad({
       squadId,
       squadCode,
+      squadName: normalizedSquadName,
       status: "idle",
       members: [newMember],
       createdAt: new Date().toISOString(),
@@ -106,6 +122,7 @@ const createSquadHandler = async (req, res) => {
       data: {
         squadId: newSquad.squadId,
         squadCode: newSquad.squadCode,
+        squadName: newSquad.squadName,
         member: newMember,
         members: [newMember],
         status: newSquad.status,
@@ -171,6 +188,7 @@ const joinSquadHandler = async (req, res) => {
         data: {
           squadId: squad.squadId,
           squadCode: squad.squadCode,
+          squadName: squad.squadName,
           member: existingMember,
           members: squad.members,
           status: squad.status,
@@ -232,6 +250,7 @@ const joinSquadHandler = async (req, res) => {
       data: {
         squadId: squad.squadId,
         squadCode: squad.squadCode,
+        squadName: squad.squadName,
         member: newMember,
         members: squad.members,
         status: squad.status,
@@ -255,6 +274,7 @@ const getSquadHandler = async (req, res) => {
       data: {
         squadId: squad.squadId,
         squadCode: squad.squadCode,
+        squadName: squad.squadName,
         status: squad.status,
         members: squad.members,
         leaderMemberId: leader ? leader.memberId : undefined,
@@ -318,6 +338,44 @@ const updateReadyStateHandler = async (req, res) => {
   }
 };
 
+const updateSquadNameHandler = async (req, res) => {
+  const { squad } = req.squadAccess;
+  const normalizedSquadName = normalizeSquadName(req.body?.squadName);
+
+  if (!normalizedSquadName) {
+    return res.status(400).json({
+      ok: false,
+      error: { code: "INVALID_REQUEST", message: "squadName is required" },
+    });
+  }
+
+  if (normalizedSquadName.length < 2 || normalizedSquadName.length > 32) {
+    return res.status(400).json({
+      ok: false,
+      error: { code: "INVALID_SQUAD_NAME", message: "Squad name must be 2-32 characters" },
+    });
+  }
+
+  try {
+    squad.squadName = normalizedSquadName;
+    await squad.save();
+
+    return res.status(200).json({
+      ok: true,
+      data: {
+        squadId: squad.squadId,
+        squadName: squad.squadName,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating squad name:", error);
+    return res.status(500).json({
+      ok: false,
+      error: { code: "INTERNAL_ERROR", message: "Failed to update squad name" },
+    });
+  }
+};
+
 const startSearchHandler = async (req, res) => {
   try {
     const { squad, member } = req.squadAccess;
@@ -348,7 +406,25 @@ const startSearchHandler = async (req, res) => {
     }
 
     squad.status = "searching";
+    squad.searchQueuedAt = new Date();
+    squad.searchRegion = squad.searchRegion || "global";
+    squad.currentEncounterId = null;
+    squad.opponentSquadId = null;
+    squad.matchedAt = null;
     await squad.save();
+
+    const encounter = await tryMatchmakeForSquad(squad);
+    if (encounter) {
+      return res.status(200).json({
+        ok: true,
+        data: {
+          squadId: squad.squadId,
+          status: "matched",
+          startedByMemberId: member.memberId,
+          encounterId: encounter.encounterId,
+        },
+      });
+    }
 
     return res.status(200).json({
       ok: true,
@@ -379,6 +455,7 @@ const cancelSearchHandler = async (req, res) => {
     }
 
     squad.status = "idle";
+  squad.searchQueuedAt = null;
     await squad.save();
 
     return res.status(200).json({
@@ -528,6 +605,7 @@ module.exports = {
   getMySquadHandler,
   getSquadHandler,
   updateReadyStateHandler,
+  updateSquadNameHandler,
   startSearchHandler,
   cancelSearchHandler,
   kickMemberHandler,
