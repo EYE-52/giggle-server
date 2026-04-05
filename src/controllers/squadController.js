@@ -599,6 +599,35 @@ const leaveSquadHandler = async (req, res) => {
   }
 };
 
+const updateLobbyVideoPresenceHandler = async (req, res) => {
+  const { inLobbyVideo } = req.body;
+
+  if (typeof inLobbyVideo !== "boolean") {
+    return res.status(400).json({
+      ok: false,
+      error: { code: "INVALID_REQUEST", message: "inLobbyVideo must be a boolean" },
+    });
+  }
+
+  try {
+    const { squad, memberIndex } = req.squadAccess;
+
+    squad.members[memberIndex].inLobbyVideo = inLobbyVideo;
+    await squad.save();
+
+    return res.status(200).json({
+      ok: true,
+      data: { memberId: squad.members[memberIndex].memberId, inLobbyVideo },
+    });
+  } catch (error) {
+    console.error("Error updating lobby video presence:", error);
+    return res.status(500).json({
+      ok: false,
+      error: { code: "INTERNAL_ERROR", message: "Failed to update lobby video presence" },
+    });
+  }
+};
+
 module.exports = {
   createSquadHandler,
   joinSquadHandler,
@@ -611,4 +640,5 @@ module.exports = {
   kickMemberHandler,
   promoteMemberHandler,
   leaveSquadHandler,
+  updateLobbyVideoPresenceHandler,
 };

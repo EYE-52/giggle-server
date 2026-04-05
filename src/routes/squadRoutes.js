@@ -11,6 +11,7 @@ const {
 	kickMemberHandler,
 	promoteMemberHandler,
 	leaveSquadHandler,
+	updateLobbyVideoPresenceHandler,
 } = require("../controllers/squadController");
 const { requireApiAuth } = require("../middlewares/authMiddleware");
 const {
@@ -330,5 +331,6 @@ router.post("/squads/:squadId/members/:memberId/promote", requireApiAuth, requir
  *         description: Squad or member not found
  */
 router.post("/squads/:squadId/leave", requireApiAuth, requireSquadMemberAccess, leaveSquadHandler);
+router.post("/squads/:squadId/lobby-video", requireApiAuth, requireSquadMemberAccess, updateLobbyVideoPresenceHandler);
 
 module.exports = router;
