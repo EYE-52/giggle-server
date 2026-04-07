@@ -8,6 +8,7 @@ const squadMemberSchema = new mongoose.Schema({
   role: { type: String, enum: ["leader", "member"], default: "member" },
   ready: { type: Boolean, default: false },
   inLobbyVideo: { type: Boolean, default: false },
+  inEncounterVideo: { type: Boolean, default: false },
   joinedAt: { type: Date, default: Date.now },
 });
 
