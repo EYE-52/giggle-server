@@ -120,7 +120,13 @@ const disconnectEncounterHandler = async (req, res) => {
       });
     }
 
-    await endEncounterToIdle({ encounter });
+    const isLeader = member.role === "leader";
+
+    if (isLeader) {
+      // Leader disconnecting ends the encounter for both squads.
+      await endEncounterToIdle({ encounter });
+    }
+    // Non-leaders just leave the Agora channel locally — the encounter stays alive.
 
     return res.status(200).json({
       ok: true,
@@ -128,7 +134,8 @@ const disconnectEncounterHandler = async (req, res) => {
         encounterId,
         memberId: member.memberId,
         disconnected: true,
-        squadStatus: "idle",
+        isLeaderDisconnect: isLeader,
+        squadStatus: isLeader ? "idle" : squad.status,
       },
     });
   } catch (error) {
