@@ -1,6 +1,6 @@
 const { getRequesterIdentity, getSquadAccessContext } = require("../app/squadAccess");
 const { createEncounterRtcToken } = require("../services/agoraTokenService");
-const { getEncounterById, endEncounterToIdle } = require("../services/matchmakingService");
+const { getEncounterById, endEncounterToIdle, endEncounterAndRequeue } = require("../services/matchmakingService");
 
 const normalizeEncounterId = (payload = {}) => {
   return payload.encounterId || payload.meetingId || null;
@@ -120,13 +120,11 @@ const disconnectEncounterHandler = async (req, res) => {
       });
     }
 
-    const isLeader = member.role === "leader";
+    const disconnectingSquadId = squad.squadId;
+    const otherSquadId = encounter.squadAId === disconnectingSquadId ? encounter.squadBId : encounter.squadAId;
 
-    if (isLeader) {
-      // Leader disconnecting ends the encounter for both squads.
-      await endEncounterToIdle({ encounter });
-    }
-    // Non-leaders just leave the Agora channel locally — the encounter stays alive.
+    // End the current encounter and requeue the squad that did not disconnect.
+    await endEncounterAndRequeue({ encounter, triggeringSquadId: otherSquadId });
 
     return res.status(200).json({
       ok: true,
@@ -134,8 +132,8 @@ const disconnectEncounterHandler = async (req, res) => {
         encounterId,
         memberId: member.memberId,
         disconnected: true,
-        isLeaderDisconnect: isLeader,
-        squadStatus: isLeader ? "idle" : squad.status,
+        requeuedSquadId: otherSquadId,
+        squadStatus: "idle",
       },
     });
   } catch (error) {
