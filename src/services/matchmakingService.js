@@ -199,15 +199,18 @@ const endEncounterAndRequeue = async ({ encounter, triggeringSquadId }) => {
   encounter.endedAt = new Date();
   await encounter.save();
 
+  // Clear encounter state and set both squads to searching with no encounter
+  const now = new Date();
   await Squad.updateMany(
     { squadId: { $in: squadIds } },
     {
       $set: {
-        status: "idle",
+        status: "searching",
         currentEncounterId: null,
         opponentSquadId: null,
         matchedAt: null,
-        searchQueuedAt: null,
+        searchQueuedAt: now,
+        "members.$[].inEncounterVideo": false,
       },
     }
   );
@@ -217,9 +220,6 @@ const endEncounterAndRequeue = async ({ encounter, triggeringSquadId }) => {
     return null;
   }
 
-  triggeringSquad.status = "searching";
-  triggeringSquad.searchQueuedAt = new Date();
-  await triggeringSquad.save();
   await tryMatchmakeForSquad(triggeringSquad);
 
   return triggeringSquad;
@@ -232,6 +232,7 @@ const endEncounterToIdle = async ({ encounter }) => {
   encounter.endedAt = new Date();
   await encounter.save();
 
+  // Clear encounter state and inEncounterVideo flags for all members
   await Squad.updateMany(
     { squadId: { $in: squadIds } },
     {
@@ -241,6 +242,7 @@ const endEncounterToIdle = async ({ encounter }) => {
         opponentSquadId: null,
         matchedAt: null,
         searchQueuedAt: null,
+        "members.$[].inEncounterVideo": false,
       },
     }
   );

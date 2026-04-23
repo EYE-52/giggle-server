@@ -398,10 +398,14 @@ const startSearchHandler = async (req, res) => {
     }
 
     const allReady = squad.members.every((candidate) => candidate.ready === true);
-    if (!allReady) {
+    const allInLobbyVideo = squad.members.every((candidate) => candidate.inLobbyVideo === true);
+    if (!allReady || !allInLobbyVideo) {
       return res.status(409).json({
         ok: false,
-        error: { code: "NOT_READY_TO_SEARCH", message: "All squad members must be ready" },
+        error: {
+          code: "NOT_READY_TO_SEARCH",
+          message: "All squad members must be ready and in the video lobby",
+        },
       });
     }
 
